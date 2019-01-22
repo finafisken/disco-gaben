@@ -1,0 +1,10 @@
+[package]
+name = "disco-gaben"
+version = "0.1.0"
+authors = ["Markus Warne <markus.warne@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+kankyo = "0.2.0"
+serenity = "0.5"
+chrono = "0.4"
