@@ -1,14 +1,16 @@
 #[macro_use] extern crate serenity;
 extern crate kankyo;
 extern crate chrono;
+extern crate typemap;
 
 use serenity::client::Client;
 use serenity::prelude::EventHandler;
 use serenity::framework::standard::StandardFramework;
 use serenity::model::user::User;
-use serenity::model::channel::Message;
 use chrono::prelude::*;
+use typemap::Key;
 use std::env;
+use std::collections::HashMap;
 
 struct Handler;
 
@@ -16,7 +18,6 @@ struct Handler;
 struct Event {
     id: u64,
     date: DateTime<Utc>,
-    // date: String,
     title: String,
     desc: String,
     link: String,
@@ -25,14 +26,29 @@ struct Event {
 
 impl EventHandler for Handler {}
 
+struct EventList;
+
+impl Key for EventList {
+    type Value = HashMap<u64, Event>;
+}
+
 fn main() {
     kankyo::load().expect("Failed to load .env file");
     // Login with a bot token from the environment
     let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
         .expect("Error creating client");
+
+    {
+        let mut data = client.data.lock();
+        data.insert::<EventList>(HashMap::default());
+    }
+
     client.with_framework(StandardFramework::new()
-        .configure(|c| c.prefix("!")) // set the bot's prefix to "~"
-        .cmd("add", add));
+        .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
+        .group("Events", |g| g
+            .prefix("event")
+            .cmd("add", add)
+        ));
 
     // start listening for events by starting a single shard
     if let Err(why) = client.start() {
@@ -40,9 +56,12 @@ fn main() {
     }
 }
 
-command!(add(_context, message, args) {
+command!(add(ctx, message, args) {
+    let mut data = ctx.data.lock();
+    let events = data.get_mut::<EventList>().unwrap();
+    let id = events.len() as u64 + 1;
     let event = Event {
-                id: 1,
+                id,
                 date: Utc.datetime_from_str(&args.single::<String>().unwrap(), "%Y-%m-%dT%H:%M").unwrap(),
                 title: args.single_quoted::<String>().unwrap(),
                 desc: args.single_quoted::<String>().unwrap(),
@@ -50,16 +69,5 @@ command!(add(_context, message, args) {
                 participants: vec![message.author.clone()]
             };
     println!("{:?}", event);
+    events.insert(id, event);
 });
-
-//2014-11-28T12:00:00
-
-// fn parse_event(text: &String) -> (String, String, String) {
-//     text.split("#").collect();
-//     let title = "lul".to_string();
-//     let desc = "bar".to_string();
-//     let link = "foo".to_string();
-//     (title, desc, link)
-// }
-
-// !add 2019-10-10 :: Something will happen :: This is a description :: www.somelink.com
