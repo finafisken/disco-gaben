@@ -1,7 +1,7 @@
 [package]
 name = "disco-gaben"
 version = "0.1.0"
-authors = ["Markus Warne <markus.warne@gmail.com>"]
+authors = ["Markus Warne <markus.warne@gmail.com>", "Johan Kamb <johan@kamb.me>"]
 edition = "2018"
 
 [dependencies]
