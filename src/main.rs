@@ -16,6 +16,12 @@ use std::collections::HashMap;
 
 struct Handler;
 
+impl EventHandler for Handler {
+    fn reaction_add(&self, ctx: Context, reaction: Reaction) { 
+        println!("{} added reaction to {}", reaction.user_id.as_u64(), reaction.message_id.as_u64()) 
+    }
+}
+
 #[derive(Debug)]
 struct Event {
     id: u64,
@@ -25,12 +31,6 @@ struct Event {
     participants: Vec<User>,
 }
 
-impl EventHandler for Handler {
-    fn reaction_add(&self, ctx: Context, reaction: Reaction) { 
-        println!("{} added reaction to {}", reaction.user_id.as_u64(), reaction.message_id.as_u64()) 
-    }
-}
-
 struct EventList;
 
 impl Key for EventList {
@@ -38,7 +38,9 @@ impl Key for EventList {
 }
 
 fn main() {
+    // load .env file
     kankyo::load().expect("Failed to load .env file");
+   
     // Login with a bot token from the environment
     let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
         .expect("Error creating client");
@@ -52,7 +54,10 @@ fn main() {
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
         .group("Events", |g| g
             .prefix("event")
-            .cmd("add", event_add)
+            .command("add", |c| c
+                .allowed_roles(vec!["Glorious leader", "pay2win"])
+                .cmd(event_add)
+            )
             .cmd("list", event_list)
             .cmd("join", event_join)
         ));
@@ -68,12 +73,12 @@ command!(event_add(ctx, message, args) {
     let events = data.get_mut::<EventList>().unwrap();
     let id = events.len() as u64 + 1;
     let event = Event {
-                id,
-                date: Utc.datetime_from_str(&args.single::<String>().unwrap(), "%Y-%m-%dT%H:%M").unwrap(),
-                title: args.single_quoted::<String>().unwrap(),
-                link: args.single::<String>().unwrap(),
-                participants: vec![message.author.clone()]
-            };
+        id,
+        date: Utc.datetime_from_str(&args.single::<String>().unwrap(), "%Y-%m-%dT%H:%M").unwrap(),
+        title: args.single_quoted::<String>().unwrap(),
+        link: args.single::<String>().unwrap(),
+        participants: vec![message.author.clone()]
+    };
     println!("{:?}", event);
     events.insert(id, event);
     let _ = message.reply("Added event");
