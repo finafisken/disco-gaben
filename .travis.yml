@@ -1,11 +1,14 @@
 language: rust
 os: linux
 rust: stable
+cache:
+  cargo: true
 script:
 - rustup target add x86_64-unknown-linux-gnu
 - cargo build --release --verbose --target x86_64-unknown-linux-gnu
 - cargo test --verbose
 before_deploy:
+- mkdir disco-gaben-$TRAVIS_TAG
 - cp target/x86_64-unknown-linux-gnu/release/disco-gaben disco-gaben-$TRAVIS_TAG/
 - cp README.md disco-gaben-$TRAVIS_TAG/
 - tar czvf disco-gaben-$TRAVIS_TAG.tar.gz disco-gaben-$TRAVIS_TAG
