@@ -1,6 +1,20 @@
 language: rust
-rust:
-  - stable
+os: linux
+rust: stable
 script:
-  - cargo build --verbose --all
-  - cargo test --verbose --all
+- rustup target add x86_64-unknown-linux-gnu
+- cargo build --release --verbose --target x86_64-unknown-linux-gnu
+- cargo test --verbose
+before_deploy:
+- cp target/x86_64-unknown-linux-gnu/release/disco-gaben disco-gaben-$TRAVIS_TAG/
+- cp README.md disco-gaben-$TRAVIS_TAG/
+- tar czvf disco-gaben-$TRAVIS_TAG.tar.gz disco-gaben-$TRAVIS_TAG
+deploy:
+  provider: releases
+  api_key:
+    secure: OaCvZyP5ii7oVy3m0+8Kz5sQnvLVej7nAz0q8hDAqSYesnVZZ5bjNCAFd09i/2xNx0wi46VRVP3XsznMLOII23mSelCOey0tyCFalYUsJY8Kuzy2kwtiZn+/4RhGKFCYO2BMHKgko5wmmwVqYOD3ZU3jhZoSdfYLCfk8crMmCbvAFUcT5BuK5ndL9vNI602lqReIjAshrtSwYYWu4N7pqYszI8N0HGr1xEncw/vhVjC+uo09ChyBS43qE+Z1wn0G8c3qIcldHSPSO7NhK2JJxaEN0NvzK38j8cwXeAWcw/E4IuT0EabMerGKUHI5XhGsIUszMVxws7ZjwobPHYcBTP5RH2JmmoL1Ke0oCzuGP+RLRdm4NvmdoH0As7PTVdYAdFcU1sun9u/ZABY4vhsUXMSNh9MfbO3xFozzQtMlDyLWeBtibZoLJ4hjT9ymHENZolC9Z30gxTX4JQ44O4X5GRyzHkMulUcpOkbBHBw5d0UkANWFDcTh+VjHB8DPZq+cE6shhhxy2cfFZkaFrlazuwDlWmbUnZ6PviVQfl+p8465GMVfE3ATbMz+GDj/9Al5ux+zSGSRrsDUIY4ntg/+GJfdYjt+hov8pkqKE6LJ+GCih9jmW2jSqnTten+eSA5eJJcIvJayaJSyRBFKe6gW4/cd2JciKN8msDX+AmP4N/0=
+  file: disco-gaben-$TRAVIS_TAG.tar.gz
+  skip_cleanup: true
+  on:
+    branch: master
+    tags: true
