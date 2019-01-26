@@ -1,6 +1,5 @@
-# Gaben
+# Gaben [![Build Status](https://travis-ci.org/finafisken/disco-gaben.svg?branch=master)](https://travis-ci.org/finafisken/disco-gaben)
 
-[![Build Status][travis.svg]][travis]
 Gaben is a Discord bot written in Rust
 
 ## Commands
