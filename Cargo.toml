@@ -1,6 +1,6 @@
 [package]
 name = "disco-gaben"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Markus Warne <markus.warne@gmail.com>", "Johan Kamb <johan@kamb.me>"]
 edition = "2018"
 
