@@ -2,25 +2,24 @@
 extern crate kankyo;
 extern crate chrono;
 extern crate typemap;
+extern crate rusoto_core;
+extern crate rusoto_dynamodb;
 
 use serenity::client::Client;
-use serenity::client::Context;
 use serenity::prelude::EventHandler;
 use serenity::framework::standard::StandardFramework;
 use serenity::model::user::User;
-use serenity::model::channel::Reaction;
 use chrono::prelude::*;
 use typemap::Key;
 use std::env;
 use std::collections::HashMap;
+use std::default::Default;
+use rusoto_core::Region;
+use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ListTablesInput};
 
 struct Handler;
 
-impl EventHandler for Handler {
-    fn reaction_add(&self, ctx: Context, reaction: Reaction) { 
-        println!("{} added reaction to {}", reaction.user_id.as_u64(), reaction.message_id.as_u64()) 
-    }
-}
+impl EventHandler for Handler { }
 
 #[derive(Debug)]
 struct Event {
@@ -41,16 +40,36 @@ fn main() {
     // load .env file
     kankyo::load().expect("Failed to load .env file");
    
+    let db_client = DynamoDbClient::new(Region::EuCentral1);
+    let list_tables_input: ListTablesInput = Default::default();
+
+    match db_client.list_tables(list_tables_input).sync() {
+        Ok(output) => {
+        match output.table_names {
+            Some(table_name_list) => {
+            println!("Tables in database:");
+
+                for table_name in table_name_list {
+                    println!("{}", table_name);
+                }
+            }
+            None => println!("No tables in database!"),
+        }
+        }
+        Err(error) => {
+        println!("Error: {:?}", error);
+        }
+    }
     // Login with a bot token from the environment
-    let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
+    let mut discord_client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
         .expect("Error creating client");
 
     {
-        let mut data = client.data.lock();
+        let mut data = discord_client.data.lock();
         data.insert::<EventList>(HashMap::default());
     }
 
-    client.with_framework(StandardFramework::new()
+    discord_client.with_framework(StandardFramework::new()
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
         .group("Events", |g| g
             .prefix("event")
@@ -63,7 +82,7 @@ fn main() {
         ));
 
     // start listening for events by starting a single shard
-    if let Err(why) = client.start() {
+    if let Err(why) = discord_client.start() {
         println!("An error occurred while running the client: {:?}", why);
     }
 }
