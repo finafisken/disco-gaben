@@ -7,5 +7,7 @@ edition = "2018"
 [dependencies]
 kankyo = "0.2.0"
 serenity = "0.5"
-chrono = "0.4"
 typemap = "0.3.3"
+rusoto_core = "0.36"
+rusoto_dynamodb = "0.36"
+uuid = { version = "0.7.2", features = ["v4"] }

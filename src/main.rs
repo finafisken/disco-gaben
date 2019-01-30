@@ -1,56 +1,43 @@
 #[macro_use] extern crate serenity;
 extern crate kankyo;
-extern crate chrono;
 extern crate typemap;
+extern crate rusoto_core;
+extern crate rusoto_dynamodb;
+extern crate uuid;
 
-use serenity::client::Client;
-use serenity::client::Context;
-use serenity::prelude::EventHandler;
-use serenity::framework::standard::StandardFramework;
-use serenity::model::user::User;
-use serenity::model::channel::Reaction;
-use chrono::prelude::*;
+use uuid::Uuid;
+use serenity::{client::Client, prelude::EventHandler, framework::standard::StandardFramework};
 use typemap::Key;
-use std::env;
-use std::collections::HashMap;
+use std::{env, collections::HashMap, default::Default};
+use rusoto_core::Region;
+use rusoto_dynamodb::{DynamoDb, DynamoDbClient, AttributeValue, PutItemInput, UpdateItemInput, ScanInput};
 
 struct Handler;
 
-impl EventHandler for Handler {
-    fn reaction_add(&self, ctx: Context, reaction: Reaction) { 
-        println!("{} added reaction to {}", reaction.user_id.as_u64(), reaction.message_id.as_u64()) 
-    }
-}
+impl EventHandler for Handler { }
 
-#[derive(Debug)]
-struct Event {
-    id: u64,
-    date: DateTime<Utc>,
-    title: String,
-    link: String,
-    participants: Vec<User>,
-}
+struct DbClient;
 
-struct EventList;
-
-impl Key for EventList {
-    type Value = HashMap<u64, Event>;
+impl Key for DbClient {
+    type Value = DynamoDbClient;
 }
 
 fn main() {
     // load .env file
     kankyo::load().expect("Failed to load .env file");
-   
+
+    let db_client = DynamoDbClient::new(Region::EuCentral1);
+
     // Login with a bot token from the environment
-    let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
+    let mut discord_client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), Handler)
         .expect("Error creating client");
 
     {
-        let mut data = client.data.lock();
-        data.insert::<EventList>(HashMap::default());
+        let mut data = discord_client.data.lock();
+        data.insert::<DbClient>(db_client);
     }
 
-    client.with_framework(StandardFramework::new()
+    discord_client.with_framework(StandardFramework::new()
         .configure(|c| c.prefix("!")) // set the bot's prefix to "!"
         .group("Events", |g| g
             .prefix("event")
@@ -63,43 +50,125 @@ fn main() {
         ));
 
     // start listening for events by starting a single shard
-    if let Err(why) = client.start() {
+    if let Err(why) = discord_client.start() {
         println!("An error occurred while running the client: {:?}", why);
     }
 }
 
 command!(event_add(ctx, message, args) {
     let mut data = ctx.data.lock();
-    let events = data.get_mut::<EventList>().unwrap();
-    let id = events.len() as u64 + 1;
-    let event = Event {
-        id,
-        date: Utc.datetime_from_str(&args.single::<String>().unwrap(), "%Y-%m-%dT%H:%M").unwrap(),
-        title: args.single_quoted::<String>().unwrap(),
-        link: args.single::<String>().unwrap(),
-        participants: vec![message.author.clone()]
+    let db_client = data.get_mut::<DbClient>().unwrap();
+    let mut event: HashMap<String, AttributeValue> = HashMap::new();
+
+    event.insert(String::from("id"), AttributeValue {
+        s: Some(Uuid::new_v4().to_string()),
+        ..Default::default()
+    });
+
+    event.insert(String::from("date"), AttributeValue {
+        s: Some(args.single::<String>().unwrap()),
+        ..Default::default()
+    });
+
+    event.insert(String::from("title"), AttributeValue {
+        s: Some(args.single_quoted::<String>().unwrap()),
+        ..Default::default()
+    });
+
+    event.insert(String::from("link"), AttributeValue {
+        s: Some(args.single::<String>().unwrap()),
+        ..Default::default()
+    });
+
+    event.insert(String::from("participants"), AttributeValue {
+        ss: Some(vec![message.author.name.clone()]),
+        ..Default::default()
+    });
+
+    let db_input = PutItemInput {
+        item: event,
+        table_name: String::from("disco-gaben-events"),
+        ..Default::default()
     };
-    println!("{:?}", event);
-    events.insert(id, event);
-    let _ = message.reply("Added event");
+
+    match db_client.put_item(db_input).sync() {
+        Ok(_) => {
+            let _ = message.channel_id.say("Event has been added");
+        }
+        Err(error) => {
+            let _ = message.channel_id.say(format!("Failed adding event\n{}", error));
+        }
+    }
 });
 
 command!(event_list(ctx, message) {
     let mut data = ctx.data.lock();
-    let events = data.get_mut::<EventList>().unwrap();
+    let db_client = data.get_mut::<DbClient>().unwrap();
 
-    for (_, event) in events.iter() {
-        let user_names: Vec<&String> = event.participants.iter().map(|u| &u.name).collect();
-        let msg = format!(":date: **{}** [#{}]\n`{}`\n{}\n```{:?}```", event.title, event.id, event.date, event.link, user_names);
-        let _ = message.channel_id.say(&msg);
+    let db_scan = ScanInput {
+        table_name: String::from("disco-gaben-events"),
+        ..Default::default()
+    };
+
+    match db_client.scan(db_scan).sync() {
+        Ok(result) => {
+            match result.items {
+                Some(items) => {
+                    for event in items.iter() {
+                        let id = event.get(&String::from("id")).unwrap().s.clone().unwrap();
+                        let date = event.get(&String::from("date")).unwrap().s.clone().unwrap();
+                        let title = event.get(&String::from("title")).unwrap().s.clone().unwrap();
+                        let link = event.get(&String::from("link")).unwrap().s.clone().unwrap();
+                        let participants = event.get(&String::from("participants")).unwrap().ss.clone().unwrap();
+
+                        let msg = format!(":date: **{}** [{}]\n`{}`\n{}\n```{:?}```", title, id, date, link, participants);
+                        let _ = message.channel_id.say(&msg);
+                    }
+                }
+                None => {
+                    let _ = message.channel_id.say(String::from("No events found"));
+                }
+            }
+        }
+        Err(error) => {
+            let _ = message.channel_id.say(format!("Failed adding you to the event\n{}", error));
+            println!("Failed adding user to the event\n{}", error);
+        }
     }
 });
 
 command!(event_join(ctx, message, args) {
     let mut data = ctx.data.lock();
-    let events = data.get_mut::<EventList>().unwrap();
+    let db_client = data.get_mut::<DbClient>().unwrap();
 
-    let event = events.get_mut(&args.single::<u64>().unwrap()).unwrap();
-    event.participants.push(message.author.clone());
-    let _ = message.reply("Added you to event");
+    let mut key = HashMap::new();
+    let mut exp_val = HashMap::new();
+
+    key.insert(String::from("id"), AttributeValue {
+        s: Some(args.single::<String>().unwrap()),
+        ..Default::default()
+    });
+
+    exp_val.insert(String::from(":user"), AttributeValue {
+        ss: Some(vec![message.author.name.clone()]),
+        ..Default::default()
+    });
+
+    let db_update = UpdateItemInput {
+        key,
+        expression_attribute_values: Some(exp_val),
+        update_expression: Some(String::from("ADD participants :user")),
+        table_name: String::from("disco-gaben-events"),
+        ..Default::default()
+    };
+
+    match db_client.update_item(db_update).sync() {
+        Ok(_) => {
+            let _ = message.channel_id.say("Added you to event");
+        }
+        Err(error) => {
+            let _ = message.channel_id.say(format!("Failed adding you to the event\n{}", error));
+            println!("Failed adding user to the event\n{}", error);
+        }
+    }
 });
