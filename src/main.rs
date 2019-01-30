@@ -15,7 +15,7 @@ use std::env;
 use std::collections::HashMap;
 use std::default::Default;
 use rusoto_core::Region;
-use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ListTablesInput};
+use rusoto_dynamodb::{DynamoDb, DynamoDbClient, AttributeValue, PutItemInput};
 
 struct Handler;
 
@@ -39,25 +39,32 @@ impl Key for EventList {
 fn main() {
     // load .env file
     kankyo::load().expect("Failed to load .env file");
+
+    let mut mock_event: HashMap<String, AttributeValue> = HashMap::new();
+
+    mock_event.insert(String::from("eventId"), AttributeValue {
+        n: Some(String::from("123")),
+        ..Default::default()
+    });
+
+    mock_event.insert(String::from("title"), AttributeValue {
+        s: Some(String::from("Testing")),
+        ..Default::default()
+    });
    
     let db_client = DynamoDbClient::new(Region::EuCentral1);
-    let list_tables_input: ListTablesInput = Default::default();
+    let db_input = PutItemInput {
+        item: mock_event,
+        table_name: String::from("disco-gaben-events"),
+        ..Default::default()
+    };
 
-    match db_client.list_tables(list_tables_input).sync() {
+    match db_client.put_item(db_input).sync() {
         Ok(output) => {
-        match output.table_names {
-            Some(table_name_list) => {
-            println!("Tables in database:");
-
-                for table_name in table_name_list {
-                    println!("{}", table_name);
-                }
-            }
-            None => println!("No tables in database!"),
-        }
+            println!("Output: {:?}", output);
         }
         Err(error) => {
-        println!("Error: {:?}", error);
+            println!("Error: {:?}", error);
         }
     }
     // Login with a bot token from the environment
