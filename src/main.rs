@@ -4,7 +4,9 @@ extern crate chrono;
 extern crate typemap;
 extern crate rusoto_core;
 extern crate rusoto_dynamodb;
+extern crate uuid;
 
+use uuid::Uuid;
 use serenity::client::Client;
 use serenity::prelude::EventHandler;
 use serenity::framework::standard::StandardFramework;
@@ -42,8 +44,8 @@ fn main() {
 
     let mut mock_event: HashMap<String, AttributeValue> = HashMap::new();
 
-    mock_event.insert(String::from("eventId"), AttributeValue {
-        n: Some(String::from("123")),
+    mock_event.insert(String::from("id"), AttributeValue {
+        s: Some(Uuid::new_v4().to_string()),
         ..Default::default()
     });
 
@@ -51,7 +53,22 @@ fn main() {
         s: Some(String::from("Testing")),
         ..Default::default()
     });
-   
+
+    mock_event.insert(String::from("link"), AttributeValue {
+        s: Some(String::from("https://www.pcgamer.com")),
+        ..Default::default()
+    });
+
+    mock_event.insert(String::from("date"), AttributeValue {
+        s: Some(String::from("2019-10-10T20:00")),
+        ..Default::default()
+    });
+
+    mock_event.insert(String::from("participants"), AttributeValue {
+        ss: Some(vec![String::from("fisken"), String::from("krkl")]),
+        ..Default::default()
+    });
+
     let db_client = DynamoDbClient::new(Region::EuCentral1);
     let db_input = PutItemInput {
         item: mock_event,
