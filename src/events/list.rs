@@ -22,8 +22,9 @@ command!(cmd(ctx, message) {
                         let title = event.get(&String::from("title")).unwrap().s.clone().unwrap();
                         let link = event.get(&String::from("link")).unwrap().s.clone().unwrap();
                         let participants = event.get(&String::from("participants")).unwrap().ss.clone().unwrap();
+                        let fmt_participants: String = participants.iter().map(|p| format!("{}{}{}", "+ ", p, "\n")).collect();
 
-                        let msg = format!(":date: **{}** [{}]\n`{}`\n{}\n```{:?}```", title, id, date, link, participants);
+                        let msg = format!(":date: **{}** (<{}>) ```diff\nid {}\n\nWhen?\n- {}\n\nWho?\n{}```", title, link, id, date, fmt_participants);
                         let _ = message.channel_id.say(&msg);
                     }
                 }
