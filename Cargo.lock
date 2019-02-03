@@ -320,7 +320,7 @@ dependencies = [
 
 [[package]]
 name = "disco-gaben"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "kankyo 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusoto_core 0.36.0 (registry+https://github.com/rust-lang/crates.io-index)",
