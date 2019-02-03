@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# requires supervisor and supervisorctl to be set up with process for gaben
+
 VERSION=$1
 
 # download release
@@ -12,4 +14,4 @@ tar xzvf disco-gaben-v$VERSION.tar.gz bin
 cp .env bin/.env
 
 # restart supervisor daemon
-sudo systemctl restart supervisord
+sudo supervisorctl restart gaben
