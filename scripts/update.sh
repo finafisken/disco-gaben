@@ -8,7 +8,10 @@ VERSION=$1
 wget https://github.com/finafisken/disco-gaben/releases/download/v$VERSION/disco-gaben-v$VERSION.tar.gz
 
 # extract into folder
-tar xzvf disco-gaben-v$VERSION.tar.gz bin
+tar xzvf disco-gaben-v$VERSION.tar.gz
+
+# rename folder for binary
+mv disco-gaben-v$VERSION bin
 
 # copy .env file
 cp .env bin/.env
