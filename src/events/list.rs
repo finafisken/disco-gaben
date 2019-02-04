@@ -25,16 +25,16 @@ command!(cmd(ctx, message) {
                         let fmt_participants: String = participants.iter().map(|p| format!("{}{}{}", "+ ", p, "\n")).collect();
 
                         let msg = format!(":date: **{}** (<{}>) ```diff\nid {}\n\nWhen?\n- {}\n\nWho?\n{}```", title, link, id, date, fmt_participants);
-                        let _ = message.channel_id.say(&msg);
+                        message.channel_id.say(&msg)?;
                     }
                 }
                 None => {
-                    let _ = message.channel_id.say(String::from("No events found"));
+                    message.channel_id.say(String::from("No events found"))?;
                 }
             }
         }
         Err(error) => {
-            let _ = message.channel_id.say(format!("Failed adding you to the event\n{}", error));
+            message.channel_id.say(format!("Failed adding you to the event\n{}", error))?;
             println!("Failed adding user to the event\n{}", error);
         }
     }

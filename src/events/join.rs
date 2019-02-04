@@ -10,7 +10,7 @@ command!(cmd(ctx, message, args) {
     let mut exp_val = HashMap::new();
 
     key.insert(String::from("id"), AttributeValue {
-        s: Some(args.single::<String>().unwrap()),
+        s: Some(args.single::<String>()?),
         ..Default::default()
     });
 
@@ -29,10 +29,10 @@ command!(cmd(ctx, message, args) {
 
     match db_client.update_item(db_update).sync() {
         Ok(_) => {
-            let _ = message.channel_id.say("Added you to event");
+            message.channel_id.say("Added you to event")?;
         }
         Err(error) => {
-            let _ = message.channel_id.say(format!("Failed adding you to the event\n{}", error));
+            message.channel_id.say(format!("Failed adding you to the event\n{}", error))?;
             println!("Failed adding user to the event\n{}", error);
         }
     }

@@ -14,17 +14,17 @@ command!(cmd(ctx, message, args) {
     });
 
     event.insert(String::from("date"), AttributeValue {
-        s: Some(args.single::<String>().unwrap()),
+        s: Some(args.single::<String>()?),
         ..Default::default()
     });
 
     event.insert(String::from("title"), AttributeValue {
-        s: Some(args.single_quoted::<String>().unwrap()),
+        s: Some(args.single_quoted::<String>()?),
         ..Default::default()
     });
 
     event.insert(String::from("link"), AttributeValue {
-        s: Some(args.single::<String>().unwrap()),
+        s: Some(args.single::<String>()?),
         ..Default::default()
     });
 
@@ -41,10 +41,10 @@ command!(cmd(ctx, message, args) {
 
     match db_client.put_item(db_input).sync() {
         Ok(_) => {
-            let _ = message.channel_id.say("Event has been added");
+            message.channel_id.say("Event has been added")?;
         }
         Err(error) => {
-            let _ = message.channel_id.say(format!("Failed adding event\n{}", error));
+            message.channel_id.say(format!("Failed adding event\n{}", error))?;
         }
     }
 });
