@@ -41,6 +41,10 @@ fn main() {
                 .allowed_roles(vec!["Glorious leader", "pay2win"])
                 .cmd(events::add::cmd)
             )
+            .command("remove", |c| c
+                .allowed_roles(vec!["Glorious leader"])
+                .cmd(events::remove::cmd)
+            )
             .cmd("list", events::list::cmd)
             .cmd("join", events::join::cmd)
         ));
