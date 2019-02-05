@@ -1,12 +1,16 @@
 extern crate reqwest;
 
+use reqwest::header::{ACCEPT};
 use std::collections::HashMap;
 use std::io::{Error, ErrorKind};
 
 fn fetch_joke() -> Result<(HashMap<String, String>), Box<std::error::Error>> {
-    let resp: HashMap<String, String> = reqwest::get("https://icanhazdadjoke.com")?
-        .json()?;
-    Ok(resp)
+    let client = reqwest::Client::new();
+    let mut response = client.get("https://icanhazdadjoke.com")
+        .header(ACCEPT, "application/json")
+        .send()?;
+    let json = response.json()?;        
+    Ok(json)
 }
 
 command!(cmd(_ctx, message) {
@@ -17,12 +21,12 @@ command!(cmd(_ctx, message) {
                     message.channel_id.say(joke)?;
                 }
                 Err(_e) => {
-                    message.channel_id.say(String::from(":troll:"))?;        
+                    message.channel_id.say(String::from("Error, Gaben is sleeping on the job"))?;
                 }
             }
         }
         Err(_e) => {
-            message.channel_id.say(String::from(":troll:"))?;
+            message.channel_id.say(String::from("Error, unforeseen consequences."))?;
         }
     }
 });
