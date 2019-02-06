@@ -7,6 +7,7 @@ extern crate uuid;
 
 mod events;
 mod util;
+mod joke;
 
 use serenity::{client::Client, prelude::EventHandler, framework::standard::StandardFramework};
 use std::env;
@@ -47,7 +48,13 @@ fn main() {
             )
             .cmd("list", events::list::cmd)
             .cmd("join", events::join::cmd)
-        ));
+        ).group("Jokes", |g| g
+            .prefix("joke")
+            .command("random", |c| c
+                .cmd(joke::random::cmd))
+        )
+
+        );
 
     // start listening for events by starting a single shard
     if let Err(why) = discord_client.start() {
