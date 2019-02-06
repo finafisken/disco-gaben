@@ -13,3 +13,5 @@ To trigger a command use the following syntax `!{command group} {command} {...ar
   - *date* provide the date in this format `YYYY-MM-ddThh:mm`
   - *title* provide title in qoutes to support spaces
   - *link* url to page relevant for event
+### `joke` commands
+- `random` will tell you a random joke
